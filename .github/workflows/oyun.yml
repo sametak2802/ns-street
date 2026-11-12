@@ -16,10 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Zip'i aç
-        run: |
-          unzip -o -q ns-street.zip -d _zip
-          mkdir -p site
-          cp -r _zip/ns-street/. site/
+        run: unzip -o -q ns-street.zip -d _zip
+      - name: Siteyi hazırla
+        run: mkdir -p site && cp -r _zip/ns-street/. site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -45,18 +44,35 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Capacitor projesi hazırla
+      - name: 1 Zip'i aç
+        run: unzip -o -q ns-street.zip -d _zip
+      - name: 2 Capacitor kur
+        run: mkdir app && cd app && npm init -y && npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+      - name: 3 Oyun dosyalarını kopyala
+        run: mkdir -p app/www && cp -r _zip/ns-street/. app/www/ && rm -f app/www/sw.js
+      - name: 4 Android projesi oluştur
+        run: cd app && npx cap init "NS Street" com.sametak.nsstreet --web-dir www && npx cap add android
+      - name: 5 Yatay ekran
+        run: sed -i 's/<activity/<activity android:screenOrientation="sensorLandscape"/' app/android/app/src/main/AndroidManifest.xml
+      - name: 6 Tam ekran
+        run: sed -i 's#</style>#<item name="android:windowFullscreen">true</item></style>#g' app/android/app/src/main/res/values/styles.xml
+      - name: 7 İkon
         run: |
-          unzip -o -q ns-street.zip -d _zip
-          mkdir app && cd app
-          npm init -y
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
-          mkdir www
-          cp -r ../_zip/ns-street/. www/
-          rm -f www/sw.js
-          npx cap init "NS Street" com.sametak.nsstreet --web-dir www
-          npx cap add android
-      - name: Yatay ekran, tam ekran ve ikon
-        run: |
-          cd app/android/app/src/main
-          sed -i 's/<activity/<activity android:screenO
+          R=app/android/app/src/main/res
+          rm -rf $R/mipmap-anydpi-v26
+          cp app/www/icons/icon-192.png $R/mipmap-mdpi/ic_launcher.png
+          cp app/www/icons/icon-192.png $R/mipmap-hdpi/ic_launcher.png
+          cp app/www/icons/icon-192.png $R/mipmap-xhdpi/ic_launcher.png
+          cp app/www/icons/icon-192.png $R/mipmap-xxhdpi/ic_launcher.png
+          cp app/www/icons/icon-192.png $R/mipmap-xxxhdpi/ic_launcher.png
+          cp app/www/icons/icon-192.png $R/mipmap-mdpi/ic_launcher_round.png
+          cp app/www/icons/icon-192.png $R/mipmap-hdpi/ic_launcher_round.png
+          cp app/www/icons/icon-192.png $R/mipmap-xhdpi/ic_launcher_round.png
+          cp app/www/icons/icon-192.png $R/mipmap-xxhdpi/ic_launcher_round.png
+          cp app/www/icons/icon-192.png $R/mipmap-xxxhdpi/ic_launcher_round.png
+      - name: 8 APK derle
+        run: cd app/android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NS-Street-APK
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
